@@ -22,7 +22,8 @@ public class App {
 	private static void dump() throws Throwable {
 		Iterable<CSVRecord> records = CSVFormat.EXCEL.withSkipHeaderRecord()
 	            .withQuote('"').withDelimiter(';').parse(new FileReader("MunicipiosBrasil.csv"));
-		
+		Client client = Client.create();
+		WebResource webResource = client.resource("https://u2unfesqt2.execute-api.us-east-1.amazonaws.com/dev/city");
 		boolean skipHeader = false;
 		for (CSVRecord record : records) {
 			if (skipHeader) {
@@ -36,22 +37,13 @@ public class App {
 				jsonObj.put("state", state);
 				jsonObj.put("latitude", latitude);
 				jsonObj.put("longitude", longitude);
-				post(jsonObj);
+				
+				ClientResponse response = webResource.type("application/json").post(ClientResponse.class, jsonObj.toString());
+				if (response.getStatus() != 200) {
+					throw new RuntimeException("Failed : HTTP error code : " + response.getStatus());
+				}
 			}
 			skipHeader=true;
-		}
-	}
-	
-	private static void post(JSONObject jsonObj) {
-		try {
-			Client client = Client.create();
-			WebResource webResource = client.resource("https://u2unfesqt2.execute-api.us-east-1.amazonaws.com/dev/city");
-			ClientResponse response = webResource.type("application/json").post(ClientResponse.class, jsonObj.toString());
-			if (response.getStatus() != 200) {
-				throw new RuntimeException("Failed : HTTP error code : " + response.getStatus());
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 }
