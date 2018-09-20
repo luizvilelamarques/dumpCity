@@ -1,6 +1,9 @@
 package br.com.iagsaude.dump.city;
 
-import java.io.FileReader;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -20,10 +23,22 @@ public class App {
 	}
 
 	private static void dump() throws Throwable {
+		WebResource webResource = Client.create().resource("https://u7lf5wgjt9.execute-api.us-east-1.amazonaws.com/hom/city");
+		for (JSONObject jsonObj : extractCsv()) {
+			ClientResponse response = webResource.type("application/json").post(ClientResponse.class, jsonObj.toString());
+			if (response.getStatus() != 200) {
+				throw new RuntimeException("Failed : HTTP error code : " + response.getStatus());
+			}
+		}
+	}
+	
+	private static List<JSONObject> extractCsv() throws Throwable{
+		List<JSONObject> retorno = new ArrayList<JSONObject>();
+		InputStreamReader isr = new InputStreamReader(App.class.getResourceAsStream("parte3.csv"));
+		BufferedReader br = new BufferedReader(isr);
+		
 		Iterable<CSVRecord> records = CSVFormat.EXCEL.withSkipHeaderRecord()
-	            .withQuote('"').withDelimiter(';').parse(new FileReader("MunicipiosBrasil.csv"));
-		Client client = Client.create();
-		WebResource webResource = client.resource("https://u2unfesqt2.execute-api.us-east-1.amazonaws.com/dev/city");
+	            .withQuote('"').withDelimiter(';').parse(br);
 		boolean skipHeader = false;
 		for (CSVRecord record : records) {
 			if (skipHeader) {
@@ -37,13 +52,11 @@ public class App {
 				jsonObj.put("state", state);
 				jsonObj.put("latitude", latitude);
 				jsonObj.put("longitude", longitude);
+				retorno.add(jsonObj); 
 				
-				ClientResponse response = webResource.type("application/json").post(ClientResponse.class, jsonObj.toString());
-				if (response.getStatus() != 200) {
-					throw new RuntimeException("Failed : HTTP error code : " + response.getStatus());
-				}
 			}
 			skipHeader=true;
 		}
+		return retorno;
 	}
 }
